@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="FormRescue mark">
+  <rect width="128" height="128" rx="32" fill="#4859c8"/>
+  <path d="M39 23h34l17 17v57a8 8 0 0 1-8 8H39a8 8 0 0 1-8-8V31a8 8 0 0 1 8-8Z" fill="#fff"/>
+  <path d="M72 24v15a4 4 0 0 0 4 4h14" fill="none" stroke="#dce1ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M45 57h22M45 69h22" fill="none" stroke="#cbd1e2" stroke-width="6" stroke-linecap="round"/>
+  <path d="m42 86 9 9 20-21" fill="none" stroke="#2b8165" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="89" cy="91" r="11" fill="#e8b353" stroke="#fff" stroke-width="4"/>
+</svg>
