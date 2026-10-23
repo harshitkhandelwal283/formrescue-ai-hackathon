@@ -3,7 +3,7 @@ import type { DemoCase } from '../types';
 export const demoCases: DemoCase[] = [
   {
     id: 'brightpath-upload',
-    shortName: { en: 'Upload size', hi: 'फ़ाइल का आकार' },
+    shortName: { en: 'File-size limit', hi: 'फ़ाइल की सीमा' },
     institution: { en: 'BrightPath Scholarship Portal', hi: 'BrightPath छात्रवृत्ति डेमो पोर्टल' },
     category: { en: 'Scholarship application', hi: 'छात्रवृत्ति आवेदन' },
     error: {
@@ -47,7 +47,7 @@ export const demoCases: DemoCase[] = [
   },
   {
     id: 'northstar-name',
-    shortName: { en: 'Name mismatch', hi: 'नाम में अंतर' },
+    shortName: { en: 'Admission · name mismatch', hi: 'प्रवेश · नाम में अंतर' },
     institution: { en: 'Northstar Admissions Demo', hi: 'Northstar प्रवेश डेमो' },
     category: { en: 'School or university admission', hi: 'स्कूल या विश्वविद्यालय प्रवेश' },
     error: { en: 'Applicant name does not match the uploaded certificate.', hi: 'आवेदक का नाम अपलोड किए गए प्रमाणपत्र से मेल नहीं खाता।' },

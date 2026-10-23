@@ -13,6 +13,16 @@ describe('FormRescue user workflows', () => {
     vi.restoreAllMocks();
   });
 
+  it('puts the workspace immediately after the hero and keeps optional context collapsed', () => {
+    render(<App />);
+    expect(screen.getByText('Understand confusing errors, find reliable guidance, and get clear next steps in your language.')).toBeInTheDocument();
+    const sections = Array.from(document.querySelector('main')!.children).filter((element) => element.tagName === 'SECTION');
+    expect(sections[0]).toHaveClass('hero');
+    expect(sections[1]).toHaveClass('workspace-section');
+    expect(sections[2]).toHaveClass('how-section');
+    expect(screen.getByText('Add details (optional)').closest('details')).not.toHaveAttribute('open');
+  });
+
   it('opens a complete fictional report from the primary sample action', async () => {
     openFirstSample();
     expect(await screen.findByRole('heading', { name: 'A clear plan for this sample' })).toBeInTheDocument();
@@ -39,6 +49,20 @@ describe('FormRescue user workflows', () => {
     expect(screen.getByText('DEMO SOURCE — FICTIONAL RULE FOR THIS EXAMPLE')).toBeInTheDocument();
   });
 
+  it.each(demoCases)('renders complete Hindi evidence, source and recovery content for $id', async (demo) => {
+    openFirstSample();
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(demo.shortName.en, 'i') }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), { target: { value: 'hi' } });
+    expect(await screen.findByRole('heading', { name: 'इस नमूने के लिए साफ़ योजना' })).toBeInTheDocument();
+    expect(screen.getAllByText(demo.error.hi).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(demo.sources[0].id)).toBeInTheDocument();
+    expect(screen.getByText('डेमो स्रोत — इस उदाहरण के लिए काल्पनिक नियम')).toBeInTheDocument();
+    expect(screen.getAllByText(demo.steps[0].title.hi).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('पुष्ट').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('संभावित').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('अज्ञात').length).toBeGreaterThanOrEqual(1);
+  });
+
   it('switches all visible sample content to Hindi and supports simpler wording', async () => {
     openFirstSample();
     fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), { target: { value: 'hi' } });
@@ -60,6 +84,10 @@ describe('FormRescue user workflows', () => {
 
   it('keeps optional context local and clears it on reset', () => {
     render(<App />);
+    const optionalDetails = screen.getByText('Add details (optional)').closest('details');
+    expect(optionalDetails).not.toHaveAttribute('open');
+    fireEvent.click(screen.getByText('Add details (optional)'));
+    expect(optionalDetails).toHaveAttribute('open');
     fireEvent.change(screen.getByLabelText('Category (optional)'), { target: { value: demoCases[0].id } });
     fireEvent.change(screen.getByLabelText('Jurisdiction (optional)'), { target: { value: 'Madhya Pradesh' } });
     fireEvent.change(screen.getByLabelText('What happened? (optional)'), { target: { value: 'The upload stopped at the file step.' } });
@@ -78,6 +106,17 @@ describe('FormRescue user workflows', () => {
     expect(screen.getByText(/No API key is requested and no live request will be sent/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Continue in demo mode' }));
     expect(await screen.findByRole('heading', { name: 'Choose a sample case' })).toBeInTheDocument();
+  });
+
+  it('sends manual-error users to sample cases without implying their text was analyzed', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Or type the error message'), { target: { value: 'My portal says upload failed.' } });
+    const sampleList = document.getElementById('sample-cases')!;
+    const scroll = vi.spyOn(sampleList, 'scrollIntoView');
+    fireEvent.click(screen.getByRole('button', { name: 'Choose a demo case instead' }));
+    expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    expect(screen.getByText(/No analysis was performed because live AI is not configured/)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'A clear plan for this sample' })).not.toBeInTheDocument();
   });
 
   it('validates unsupported and oversized screenshots in the browser', () => {
@@ -117,6 +156,40 @@ describe('FormRescue user workflows', () => {
     expect(screen.queryByRole('group', { name: /Redaction cover 1/ })).not.toBeInTheDocument();
     fireEvent.error(preview);
     expect(screen.getByRole('alert')).toHaveTextContent('This image could not be previewed. Try another file.');
+  });
+
+  it('offers direct image replacement, opens the picker, and clears masks for the accepted file', async () => {
+    const createObjectURL = vi.fn().mockReturnValueOnce('blob:original').mockReturnValueOnce('blob:replacement');
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+    render(<App />);
+    const input = screen.getByLabelText('Browse files') as HTMLInputElement;
+    const original = new File(['original image'], 'original.png', { type: 'image/png' });
+    fireEvent.change(input, { target: { files: [original] } });
+    expect(await screen.findByAltText('Local screenshot preview. No text has been identified.')).toHaveAttribute('src', 'blob:original');
+    fireEvent.click(screen.getByRole('button', { name: 'Add centered cover' }));
+    expect(screen.getByText('1 masks added')).toBeInTheDocument();
+    const pickerClick = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => undefined);
+    fireEvent.click(screen.getByRole('button', { name: 'Replace image' }));
+    expect(pickerClick).toHaveBeenCalledOnce();
+    pickerClick.mockRestore();
+    const replacement = new File(['replacement image'], 'replacement.png', { type: 'image/png' });
+    fireEvent.change(input, { target: { files: [replacement] } });
+    await waitFor(() => expect(screen.getByAltText('Local screenshot preview. No text has been identified.')).toHaveAttribute('src', 'blob:replacement'));
+    expect(screen.getByText('replacement.png')).toBeInTheDocument();
+    expect(screen.getByText('0 masks added')).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /Redaction cover 1/ })).not.toBeInTheDocument();
+  });
+
+  it('localizes replacement and manual-sample actions in Hindi', async () => {
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:hindi-screenshot') });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+    render(<App />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), { target: { value: 'hi' } });
+    expect(screen.getByRole('button', { name: 'इसके बजाय नमूना मामला चुनें' })).toBeInTheDocument();
+    const input = screen.getByLabelText('फ़ाइल चुनें');
+    fireEvent.change(input, { target: { files: [new File(['image'], 'hindi.png', { type: 'image/png' })] } });
+    expect(await screen.findByRole('button', { name: 'तस्वीर बदलें' })).toBeInTheDocument();
   });
 
   it('uses browser copy and print actions with truthful success feedback', async () => {

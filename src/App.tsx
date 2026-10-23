@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, KeyboardEvent, PointerEvent } from 'react';
+import type { KeyboardEvent, PointerEvent } from 'react';
 import {
-  ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, ChevronDown, CircleAlert,
-  FileCheck2, FileImage, FileText, HelpCircle, Info, Languages, LockKeyhole,
-  MessageCircle, RotateCcw, ShieldCheck, Sparkles, Volume2, VolumeX, X,
+  ArrowDown, ArrowRight, ArrowUpRight, CalendarDays, Check, CheckCircle2, ChevronDown, CircleAlert,
+  FileCheck2, FileImage, FileText, HelpCircle, Info, Languages, LockKeyhole, MapPin,
+  MessageCircle, RotateCcw, ShieldCheck, Sparkles, UserRound, Volume2, VolumeX, X,
 } from 'lucide-react';
 import { demoCases } from './data/cases';
 import { uiText } from './i18n/strings';
@@ -20,6 +20,8 @@ const statusIcon = {
   likely: CircleAlert,
   unknown: HelpCircle,
 } satisfies Record<EvidenceStatus, typeof CheckCircle2>;
+
+const sampleCaseIcons = [FileImage, UserRound, CalendarDays, MapPin] as const;
 
 function EvidenceBadge({ status, label }: { status: EvidenceStatus; label: string }) {
   const Icon = statusIcon[status];
@@ -191,14 +193,10 @@ function App() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function handleManualOpen() {
-    if (!manualError.trim()) {
-      setManualNotice(true);
-      notify(locale === 'en' ? 'Type the exact error text first.' : 'पहले त्रुटि का सही पाठ लिखें।');
-      return;
-    }
-    setManualNotice(true);
+  function showDemoCases() {
     setLiveMode(false);
+    setManualNotice(Boolean(manualError.trim()));
+    goTo('sample-cases', 1);
   }
 
   function toggleStep(step: RecoveryStep) {
@@ -393,17 +391,6 @@ function App() {
           </div>
         </section>
 
-        <section className="how-section" id="how-it-works">
-          <SectionHeading eyebrow={text('howLabel')} title={text('howTitle')} />
-          <div className="how-steps">
-            {(['understand', 'verify', 'recover'] as const).map((step, index) => {
-              const Icon = [FileText, ShieldCheck, ArrowUpRight][index];
-              const description = current[`${step}Text` as 'understandText' | 'verifyText' | 'recoverText'];
-              return <article className="how-step" key={step}><div className="how-step-top"><span className="how-num">0{index + 1}</span><span className="how-icon"><Icon size={18} /></span></div><h3>{text(step)}</h3><p>{description}</p></article>;
-            })}
-          </div>
-        </section>
-
         <section className="workspace-section" id="workspace">
           <SectionHeading eyebrow={text('workspaceEyebrow')} title={text('workspaceTitle')} description={text('workspaceIntro')} />
           <div className="mode-bar">
@@ -430,22 +417,27 @@ function App() {
               <div className="workspace-grid" id="understand-panel">
                 <section className="work-card case-picker-card" aria-labelledby="case-heading">
                   <div className="work-card-heading"><div><span className="card-step-label"><span>01</span>{text('stageUnderstand')}</span><h3 id="case-heading">{text('chooseCase')}</h3><p>{text('chooseCaseHint')}</p></div><span className="card-heading-icon"><FileText size={18} /></span></div>
-                  <div className="case-list">
-                    {demoCases.map((sample, index) => <button key={sample.id} className={`case-option ${selectedId === sample.id ? 'case-option-selected' : ''}`} onClick={() => openDemo(sample.id)}>
-                      <span className={`case-index case-index-${index + 1}`}>0{index + 1}</span><span className="case-option-copy"><strong>{sample.shortName[locale]}</strong><small>{sample.institution[locale]}</small></span>{selectedId === sample.id ? <CheckCircle2 size={18} className="case-selected-icon" /> : <ArrowUpRight size={16} className="case-open-icon" />}
-                    </button>)}
+                  <div className="case-list" id="sample-cases">
+                    {demoCases.map((sample, index) => { const CaseIcon = sampleCaseIcons[index] ?? FileText; return <button key={sample.id} className={`case-option ${selectedId === sample.id ? 'case-option-selected' : ''}`} onClick={() => openDemo(sample.id)} aria-pressed={selectedId === sample.id}>
+                      <span className={`case-index case-index-${index + 1}`} aria-hidden="true"><CaseIcon size={15} strokeWidth={2.1} /></span><span className="case-option-copy"><strong>{sample.shortName[locale]}</strong><small>{sample.institution[locale]}</small></span>{selectedId === sample.id ? <CheckCircle2 size={18} className="case-selected-icon" aria-hidden="true" /> : <ArrowUpRight size={16} className="case-open-icon" aria-hidden="true" />}
+                    </button>; })}
                   </div>
-                  <div className="field-row"><label htmlFor="category">{text('category')}</label><select id="category" value={categoryHint} onChange={(event) => setCategoryHint(event.target.value)}><option value="">{text('categoryPlaceholder')}</option>{demoCases.map((sample) => <option key={sample.id} value={sample.id}>{sample.category[locale]}</option>)}</select></div>
-                  <div className="field-row"><label htmlFor="jurisdiction">{text('jurisdiction')}</label><input id="jurisdiction" type="text" value={jurisdictionHint} onChange={(event) => setJurisdictionHint(event.target.value)} placeholder={text('jurisdictionPlaceholder')} autoComplete="off" /></div>
-                  <div className="field-row"><label htmlFor="context">{text('context')}</label><textarea id="context" rows={2} value={contextNote} onChange={(event) => setContextNote(event.target.value)} placeholder={text('contextPlaceholder')} /></div>
-                  <p className="field-helper">{text('demoContextNote')}</p>
+                  <details className="optional-details">
+                    <summary><span><strong>{text('optionalDetails')}</strong><small>{text('optionalDetailsHint')}</small></span><ChevronDown size={17} aria-hidden="true" /></summary>
+                    <div className="optional-details-content">
+                      <div className="field-row"><label htmlFor="category">{text('category')}</label><select id="category" value={categoryHint} onChange={(event) => setCategoryHint(event.target.value)}><option value="">{text('categoryPlaceholder')}</option>{demoCases.map((sample) => <option key={sample.id} value={sample.id}>{sample.category[locale]}</option>)}</select></div>
+                      <div className="field-row"><label htmlFor="jurisdiction">{text('jurisdiction')}</label><input id="jurisdiction" type="text" value={jurisdictionHint} onChange={(event) => setJurisdictionHint(event.target.value)} placeholder={text('jurisdictionPlaceholder')} autoComplete="off" /></div>
+                      <div className="field-row"><label htmlFor="context">{text('context')}</label><textarea id="context" rows={2} value={contextNote} onChange={(event) => setContextNote(event.target.value)} placeholder={text('contextPlaceholder')} /></div>
+                      <p className="field-helper">{text('demoContextNote')}</p>
+                    </div>
+                  </details>
                 </section>
 
                 <section className="work-card upload-card" id="upload-card" aria-labelledby="upload-heading">
                   <div className="work-card-heading"><div><span className="card-step-label"><span>01</span>{text('stageUnderstand')}</span><h3 id="upload-heading">{text('uploadTitle')}</h3><p>{text('uploadHint')}</p></div><span className="card-heading-icon"><FileImage size={18} /></span></div>
                   <div className="privacy-alert"><ShieldCheck size={17} /><p>{text('privacyWarning')}</p></div>
                   <div className={`drop-zone ${imageFile ? 'drop-zone-filled' : ''}`} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (file) acceptFile(file); }} onPaste={(event) => { const file = Array.from(event.clipboardData.files).find((item) => item.type.startsWith('image/')); if (file) { event.preventDefault(); acceptFile(file); } }} tabIndex={0} aria-label={text('uploadHint')}>
-                    {!imageFile ? <><span className="upload-icon"><FileImage size={22} /></span><strong>{text('uploadHint')}</strong><span className="file-types">{text('fileTypes')}</span><button className="button button-secondary browse-button" onClick={() => fileInputRef.current?.click()}><FileImage size={15} />{text('browse')}</button><small>{text('pasteHint')}</small></> : <div className="image-file-top"><span className="upload-icon upload-icon-small"><FileImage size={17} /></span><div><strong>{imageFile.name}</strong><small>{(imageFile.size / 1024 / 1024).toFixed(2)} MB · {text('demoMode')}</small></div><button className="icon-button" aria-label={text('removeImage')} onClick={removeImage}><X size={17} /></button></div>}
+                    {!imageFile ? <><span className="upload-icon"><FileImage size={22} /></span><strong>{text('uploadHint')}</strong><span className="file-types">{text('fileTypes')}</span><button type="button" className="button button-secondary browse-button" onClick={() => fileInputRef.current?.click()}><FileImage size={15} />{text('browse')}</button><small>{text('pasteHint')}</small></> : <div className="image-file-top"><span className="upload-icon upload-icon-small"><FileImage size={17} /></span><div className="image-file-meta"><strong>{imageFile.name}</strong><small>{(imageFile.size / 1024 / 1024).toFixed(2)} MB · {text('demoMode')}</small></div><div className="image-file-actions"><button type="button" className="text-button replace-image-button" onClick={() => fileInputRef.current?.click()}><FileImage size={14} />{text('replaceImage')}</button><button type="button" className="icon-button" aria-label={text('removeImage')} onClick={removeImage}><X size={17} /></button></div></div>}
                     <input ref={fileInputRef} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) acceptFile(file); event.currentTarget.value = ''; }} aria-label={text('browse')} />
                   </div>
                   {imageError && <p className="field-error" role="alert"><CircleAlert size={15} />{imageError}</p>}
@@ -462,7 +454,7 @@ function App() {
                     {masks.length > 0 && <div className="mask-list">{masks.map((_, index) => <div key={index}><span>{text('solidCover')} {index + 1} · {locale === 'en' ? 'Arrow keys move; Shift + arrows resize; Delete removes' : 'तीर कुंजियाँ: खिसकाएँ; Shift + तीर: आकार बदलें; Delete: हटाएँ'}</span><button className="icon-button icon-button-small" onClick={() => setMasks((old) => old.filter((__, itemIndex) => itemIndex !== index))} aria-label={`${locale === 'en' ? 'Remove cover' : 'आवरण हटाएँ'} ${index + 1}`}><X size={14} /></button></div>)}</div>}
                     {flatPreviewUrl && <div className="flattened-preview"><div><CheckCircle2 size={16} /><strong>{locale === 'en' ? 'Flattened redaction preview' : 'स्थायी आवरण का पूर्वावलोकन'}</strong></div><p>{locale === 'en' ? 'Solid masks are burned into this separate PNG. This build does not send either image to an AI provider.' : 'ठोस आवरण इस अलग PNG में स्थायी रूप से जुड़ गया है। यह संस्करण कोई भी तस्वीर AI प्रदाता को नहीं भेजता।'}</p><img src={flatPreviewUrl} alt={locale === 'en' ? 'Preview of the flattened screenshot with solid redactions' : 'ठोस आवरण के साथ स्थायी स्क्रीनशॉट पूर्वावलोकन'} /></div>}
                   </div>}
-                  <div className="manual-entry"><label htmlFor="manual-error">{text('manualText')}</label><textarea id="manual-error" rows={3} value={manualError} onChange={(event) => { setManualError(event.target.value); setManualNotice(false); }} placeholder={text('manualPlaceholder')} /><button className="button button-secondary manual-submit" onClick={handleManualOpen}><ArrowRight size={15} />{text('analyzeDemo')}</button>{manualNotice && <p className="manual-notice" role="status">{locale === 'en' ? 'This text is held only in this page. No analysis was performed because live AI is not configured. Choose a sample report above to explore the demo.' : 'यह पाठ केवल इसी पेज पर रहता है। लाइव AI सेट न होने से कोई विश्लेषण नहीं हुआ। डेमो देखने के लिए ऊपर नमूना रिपोर्ट चुनें।'}</p>}</div>
+                  <div className="manual-entry"><label htmlFor="manual-error">{text('manualText')}</label><textarea id="manual-error" rows={3} value={manualError} onChange={(event) => { setManualError(event.target.value); setManualNotice(false); }} placeholder={text('manualPlaceholder')} /><button type="button" className="button button-secondary manual-submit" onClick={showDemoCases}><ArrowRight size={15} />{text('manualAction')}</button>{manualNotice && <p className="manual-notice" role="status">{locale === 'en' ? 'This text is held only in this page. No analysis was performed because live AI is not configured. Choose a sample report above to explore the demo.' : 'यह पाठ केवल इसी पेज पर रहता है। लाइव AI सेट न होने से कोई विश्लेषण नहीं हुआ। डेमो देखने के लिए ऊपर नमूना रिपोर्ट चुनें।'}</p>}</div>
                 </section>
               </div>
 
@@ -475,7 +467,7 @@ function App() {
                 </div>
 
                 <section className="evidence-section" id="verification">
-                  <div className="evidence-section-head"><div><span className="card-step-label"><span>02</span>{text('stageVerify')}</span><h3>{text('evidenceTitle')}</h3><p>{text('evidenceIntro')}</p></div>{coverage && <div className="coverage-card"><div className="coverage-ring" style={{ '--coverage': `${coverage.score}%` } as CSSProperties}><div><strong>{coverage.score}%</strong></div></div><div><strong>{text('confidenceTitle')}</strong><span>{coverage.confirmed}/{coverage.total} {locale === 'en' ? 'directly supported' : 'सीधे समर्थित'}</span></div><button className="coverage-info" title={text('confidenceExplain')} aria-label={text('confidenceExplain')}><Info size={15} /></button></div>}</div>
+                  <div className="evidence-section-head"><div><span className="card-step-label"><span>02</span>{text('stageVerify')}</span><h3>{text('evidenceTitle')}</h3><p>{text('evidenceIntro')}</p></div>{coverage && <div className="coverage-card"><div className="coverage-ring"><div><strong>{coverage.score}%</strong></div></div><div><strong>{text('confidenceTitle')}</strong><span>{coverage.confirmed}/{coverage.total} {locale === 'en' ? 'directly supported' : 'सीधे समर्थित'}</span></div><button className="coverage-info" title={text('confidenceExplain')} aria-label={text('confidenceExplain')}><Info size={15} /></button></div>}</div>
                   <p className="coverage-caption">{text('confidenceExplain')}</p>
                   <div className="evidence-legend"><span><EvidenceBadge status="confirmed" label={text('confirmed')} /><small>{text('confirmedExplain')}</small></span><span><EvidenceBadge status="likely" label={text('likely')} /><small>{text('likelyExplain')}</small></span><span><EvidenceBadge status="unknown" label={text('unknown')} /><small>{text('unknownExplain')}</small></span></div>
                   <div className="finding-list">{demo.findings.map((finding) => <article className={`finding-card finding-${finding.status}`} key={finding.id}><div className="finding-status"><EvidenceBadge status={finding.status} label={selectedStatusLabels[finding.status]} /></div><div className="finding-content"><h4>{finding.text[locale]}</h4><p>{finding.why[locale]}</p>{finding.whatWouldHelp && <div className="resolve-hint"><ArrowRight size={14} /><span>{finding.whatWouldHelp[locale]}</span></div>}</div></article>)}</div>
@@ -498,6 +490,17 @@ function App() {
               </section>}
             </>
           )}
+        </section>
+
+        <section className="how-section" id="how-it-works">
+          <SectionHeading eyebrow={text('howLabel')} title={text('howTitle')} />
+          <div className="how-steps">
+            {(['understand', 'verify', 'recover'] as const).map((step, index) => {
+              const Icon = [FileText, ShieldCheck, ArrowUpRight][index];
+              const description = current[`${step}Text` as 'understandText' | 'verifyText' | 'recoverText'];
+              return <article className="how-step" key={step}><div className="how-step-top"><span className="how-num">0{index + 1}</span><span className="how-icon"><Icon size={18} /></span></div><h3>{text(step)}</h3><p>{description}</p></article>;
+            })}
+          </div>
         </section>
 
         <section className="comparison-section" id="before-after">
